@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Find & Replace – Mobile Friendly Fixed UI</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f6f6f7;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      padding: 18px;
+      background: #364265;
+      color: #fff;
+      font-weight: bold;
+      font-size: 32px;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+    .controls-stack {
+      padding: 20px 14px 8px 14px;
+      background: #e7e7ed;
+      display: flex;
+      flex-direction: column;
+      gap: 19px;
+      font-size: 18px;
+    }
+    .controls-block {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 3px;
+    }
+    .controls-block label {
+      font-weight: bold;
+      font-size: 21px;
+      margin-right: 8px;
+      min-width: 80px;
+    }
+    .controls-block input[type="text"] {
+      flex: 1 1 0;
+      padding: 10px;
+      font-size: 21px;
+      border-radius: 4px;
+      border: 2px solid #bbb;
+      outline: none;
+      min-width: 80px;
+      background: #f6f6fc;
+      color: #222;
+    }
+    .controls-block button {
+      padding: 12px 24px;
+      font-size: 21px;
+      border: none;
+      background: #5679ff;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .controls-block button:hover {
+      background: #405cd9;
+    }
+    #main-content {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+      box-sizing: border-box;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    textarea {
+      flex: 1 1 75%;
+      width: 100%;
+      min-height: 0;
+      height: 100%;
+      resize: none;
+      font-family: monospace;
+      font-size: 22px;
+      padding: 18px;
+      border-radius: 7px;
+      border: 2px solid #bbb;
+      background: #fff;
+      color: #272727;
+      box-sizing: border-box;
+      margin: 0 0 18px 0;
+      outline: none;
+    }
+    .preview-label {
+      font-weight: bold;
+      font-size: 21px;
+      margin-bottom: 13px;
+      margin-top: 7px;
+      display: block;
+    }
+    .preview-area {
+      flex: 0 0 30%;
+      max-height: 30vh;
+      min-height: 80px;
+      margin-top: 2px;
+      display: flex;
+      flex-direction: column;
+    }
+    pre {
+      background: #222;
+      color: #eee;
+      padding: 18px;
+      border-radius: 7px;
+      font-size: 22px;
+      overflow-x: auto;
+      user-select: text;
+      white-space: pre-wrap;
+      word-break: break-word;
+      flex: 1 1 70%;
+      margin-top: 0;
+      margin-bottom: 12px;
+      height: 100%;
+      box-sizing: border-box;
+      min-height: 0;
+      font-family: monospace !important;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+    .highlight {
+      background-color: yellow;
+      color: #111;
+    }
+    .replace-highlight {
+      background-color: #00ffe7;
+      color: #111;
+    }
+    .message {
+      color: #29c079;
+      font-weight: bold;
+      padding-bottom: 14px;
+      font-size: 22px;
+    }
+    /* Responsive styles for mobile */
+    @media (max-width: 650px) {
+      .header { font-size: 19px; padding: 12px; }
+      .controls-stack { font-size: 13px; padding: 8px 3px 4px 3px; gap: 12px; }
+      .controls-block label { font-size: 17px; min-width: 60px; }
+      .controls-block input[type="text"] { font-size: 15px; padding: 6px; min-width: 40px; }
+      .controls-block button { font-size: 15px; padding: 6px 12px; }
+      #main-content { padding: 5px; }
+      textarea { font-size: 15px; padding: 8px; border-radius: 5px; margin-bottom: 8px; }
+      .preview-label { font-size: 13px; margin-bottom: 5px; }
+      .preview-area { min-height: 50px; }
+      pre { font-size: 15px; padding: 8px; border-radius: 5px; }
+      .message { padding-bottom: 7px; font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">Find & Replace – Mobile Friendly, Fixed UI</div>
+  <div class="controls-stack">
+    <div class="controls-block">
+      <label for="findInput">Find</label>
+      <input type="text" id="findInput" placeholder="Enter text to find">
+      <button onclick="findHighlight()">Find</button>
+    </div>
+    <div class="controls-block">
+      <label for="replaceInput">Replace</label>
+      <input type="text" id="replaceInput" placeholder="Enter replacement text">
+      <button onclick="replaceHighlight()">Replace</button>
+      <button onclick="copyCode()">Copy</button>
+    </div>
+  </div>
+  <div id="main-content">
+    <textarea id="codeInput" placeholder="Paste your code here..."></textarea>
+    <div class="preview-area">
+      <span class="preview-label">Preview (highlighted matches shown here):</span>
+      <pre id="codePreview"></pre>
+      <div id="message" class="message"></div>
+    </div>
+  </div>
+  <script>
+    // Render HTML safely in a <pre> block
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    // Show plain code in preview initially
+    function updatePreview() {
+      const code = document.getElementById('codeInput').value;
+      document.getElementById('codePreview').innerText = code;
+      document.getElementById('message').textContent = '';
+    }
+    updatePreview();
+    document.getElementById('codeInput').addEventListener('input', updatePreview);
+
+    // Highlight search matches in preview
+    function findHighlight() {
+      const code = document.getElementById('codeInput').value;
+      const search = document.getElementById('findInput').value;
+      const preview = document.getElementById('codePreview');
+      if (!search) {
+        preview.innerText = code;
+        document.getElementById('message').textContent = '';
+        return;
+      }
+      // Escape HTML first, then highlight
+      let htmlEscaped = escapeHtml(code);
+      // Escape special regex chars:
+      const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Use 'g' and 'i' for global and case-insensitive
+      const regex = new RegExp(safeSearch, 'gi');
+      // Replace with highlight span
+      const highlighted = htmlEscaped.replace(regex, function(match) {
+        return `<span class="highlight">${match}</span>`;
+      });
+      preview.innerHTML = highlighted;
+      document.getElementById('message').textContent = 'Match(es) highlighted in preview!';
+    }
+
+    // Replace all search matches in code & highlight replacements in preview
+    function replaceHighlight() {
+      const code = document.getElementById('codeInput').value;
+      const find = document.getElementById('findInput').value;
+      const replaceWith = document.getElementById('replaceInput').value;
+      const preview = document.getElementById('codePreview');
+      if (!find) {
+        preview.innerText = code;
+        document.getElementById('message').textContent = '';
+        return;
+      }
+      // Escape HTML first
+      let htmlEscaped = escapeHtml(code);
+      const safeFind = find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(safeFind, 'gi');
+      const highlighted = htmlEscaped.replace(regex, function() {
+        return `<span class="replace-highlight">${escapeHtml(replaceWith)}</span>`;
+      });
+      preview.innerHTML = highlighted;
+      document.getElementById('message').textContent =
+        `All "${find}" replaced and highlighted in preview!`;
+      // Actually update the textarea with replaced code:
+      document.getElementById('codeInput').value = code.replace(regex, replaceWith);
+    }
+
+    // Copy plain code (no highlights) from textarea
+    function copyCode() {
+      const code = document.getElementById('codeInput').value;
+      navigator.clipboard.writeText(code)
+        .then(() => {
+          document.getElementById('message').textContent = 'Code copied!';
+        })
+        .catch(() => {
+          document.getElementById('message').textContent = 'Copy failed.';
+        });
+    }
+  </script>
+</body>
+</html>
