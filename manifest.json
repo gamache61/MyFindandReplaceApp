@@ -1,0 +1,17 @@
+{
+  "background_color": "#ffffff",
+  "dir": "auto",
+  "display": "standalone",
+  "name": "MyFindandReplaceApp",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "FindandReplace",
+  "start_url": "/index.html",
+  "theme_color": "#ffffff",
+  "description": "Description:\nA web-based tool for quickly finding and replacing text in multi-line code or documents, optimized for large files and mobile-friendly use.",
+  "lang": "en",
+  "display_override": [
+    "standalone",
+    "window-controls-overlay"
+  ]
+}
