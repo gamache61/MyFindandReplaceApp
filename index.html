@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Find & Replace Tool</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #121212;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: #e6e6e6;
+}
+
+#status {
+  padding: 14px;
+  background: #1e1e1e;
+  border-bottom: 2px solid #333;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+}
+
+textarea {
+  width: 100%;
+  height: 55vh;
+  font-size: 22px;
+  padding: 14px;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  resize: none;
+  background: #0f0f0f;
+  color: #f0f0f0;
+}
+
+.controls {
+  padding: 12px;
+  background: #1a1a1a;
+  border-top: 2px solid #333;
+}
+
+input {
+  font-size: 22px;
+  padding: 10px;
+  width: 45%;
+  margin-bottom: 12px;
+  background: #1c1c1c;
+  color: #f0f0f0;
+  border: 1px solid #333;
+}
+
+button {
+  font-size: 22px;
+  padding: 14px 20px;
+  margin-right: 10px;
+  margin-top: 10px;
+  background: #2a2a2a;
+  color: #ffffff;
+  border: 1px solid #444;
+}
+
+button:hover {
+  background: #3a3a3a;
+}
+
+#fileInput {
+  display: none;
+}
+</style>
+</head>
+<body>
+
+<div id="status">Ready.</div>
+
+<textarea id="mainText" placeholder="Paste your text here..."></textarea>
+
+<div class="controls">
+    <input id="findText" placeholder="Find">
+    <input id="replaceText" placeholder="Replace">
+    <br>
+
+    <button onclick="triggerOpen()">Open</button>
+    <button onclick="doSave()">Save</button>
+    <button onclick="doFind()">Find</button>
+    <button onclick="doReplace()">Replace</button>
+    <button onclick="doReplaceAll()">Replace All</button>
+    <button onclick="doClear()">Clear</button>
+
+    <input type="file" id="fileInput" accept=".txt,.js,.html,.css,.json">
+</div>
+
+<script>
+let currentMatchIndex = -1;
+
+function setStatus(message) {
+    document.getElementById("status").textContent = message;
+}
+
+//
+// ⭐⭐⭐ FIXED FIND — iPhone highlight + forced redraw ⭐⭐⭐
+//
+function doFind() {
+    const textarea = document.getElementById("mainText");
+    const text = textarea.value;
+    const find = document.getElementById("findText").value;
+
+    if (!find) {
+        setStatus("No search term entered.");
+        return;
+    }
+
+    const regex = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "gi");
+    const matches = [...text.matchAll(regex)];
+
+    if (matches.length === 0) {
+        setStatus("No matches found.");
+        return;
+    }
+
+    currentMatchIndex = (currentMatchIndex + 1) % matches.length;
+    const match = matches[currentMatchIndex];
+
+    // iPhone highlight fix: blur → focus → delay → selection
+    textarea.blur();
+    textarea.focus();
+
+    setTimeout(() => {
+        const start = match.index;
+        const end = start + match[0].length;
+
+        textarea.selectionStart = start;
+        textarea.selectionEnd = end;
+
+        // Force Safari/Edge to repaint the highlight
+        const force = textarea.value;
+
+        // Scroll to center the match
+        const ratio = start / text.length;
+        textarea.scrollTop = textarea.scrollHeight * ratio - textarea.clientHeight / 2;
+
+        setStatus(`Found ${matches.length} matches. Showing match ${currentMatchIndex + 1} of ${matches.length}.`);
+    }, 30);
+}
+
+//
+// REPLACE (single)
+//
+function doReplace() {
+    const textarea = document.getElementById("mainText");
+    const find = document.getElementById("findText").value;
+    const replace = document.getElementById("replaceText").value;
+
+    if (!find) {
+        setStatus("No search term entered.");
+        return;
+    }
+
+    const selected = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
+
+    if (selected !== find) {
+        setStatus("No match selected to replace.");
+        return;
+    }
+
+    textarea.setRangeText(replace);
+    setStatus("Replaced 1 occurrence.");
+}
+
+//
+// ⭐⭐⭐ REPLACE ALL — LARGE FILE SAFE ⭐⭐⭐
+//
+async function doReplaceAll() {
+    const textarea = document.getElementById("mainText");
+    const find = document.getElementById("findText").value;
+    const replace = document.getElementById("replaceText").value;
+
+    if (!find) {
+        setStatus("No search term entered.");
+        return;
+    }
+
+    let text = textarea.value;
+    let chunkSize = 500000;
+    let result = "";
+    let count = 0;
+
+    setStatus("Replacing...");
+
+    for (let i = 0; i < text.length; i += chunkSize) {
+        let chunk = text.slice(i, i + chunkSize);
+
+        let parts = chunk.split(find);
+        count += parts.length - 1;
+
+        chunk = parts.join(replace);
+
+        result += chunk;
+
+        await new Promise(r => setTimeout(r, 0));
+    }
+
+    textarea.value = result;
+    setStatus(`Replaced ${count} occurrences.`);
+}
+
+//
+// CLEAR
+//
+function doClear() {
+    document.getElementById("mainText").value = "";
+    document.getElementById("findText").value = "";
+    document.getElementById("replaceText").value = "";
+    currentMatchIndex = -1;
+    setStatus("Ready.");
+}
+
+//
+// ⭐⭐⭐ OPEN (iPhone/Edge compatible) ⭐⭐⭐
+//
+function triggerOpen() {
+    document.getElementById("fileInput").click();
+}
+
+document.getElementById("fileInput").addEventListener("change", async function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const text = await file.text();
+    document.getElementById("mainText").value = text;
+    currentMatchIndex = -1;
+    setStatus("File opened.");
+});
+
+//
+// ⭐⭐⭐ SAVE (iPhone/Edge compatible) ⭐⭐⭐
+//
+function doSave() {
+    const text = document.getElementById("mainText").value;
+    const blob = new Blob([text], { type: "text/plain" });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "file.txt";
+    a.click();
+
+    URL.revokeObjectURL(url);
+    setStatus("File saved.");
+}
+</script>
+
+</body>
+</html>
